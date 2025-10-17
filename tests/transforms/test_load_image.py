@@ -25,7 +25,7 @@ from PIL import Image
 
 from monai.apps import download_and_extract
 from monai.data import NibabelReader, PydicomReader
-from monai.data.meta_obj import set_track_meta
+from monai.data.meta_obj import get_track_meta, set_track_meta
 from monai.data.meta_tensor import MetaTensor
 from monai.transforms import LoadImage
 from monai.utils import optional_import
@@ -465,6 +465,20 @@ class TestLoadImage(unittest.TestCase):
             result.shape, (3, 128, 128, 128) if input_param.get("ensure_channel_first", False) else expected_shape
         )
         self.assertEqual(result.meta["original_channel_dim"], input_param["channel_dim"])
+
+    @parameterized.expand([TEST_CASE_15])
+    def test_ensure_channel_first_track_meta_false(self, input_param, filename, expected_shape):
+        track_meta = get_track_meta()
+        set_track_meta(False)
+        test_image = np.random.rand(*expected_shape)
+        with tempfile.TemporaryDirectory() as tempdir:
+            filename = os.path.join(tempdir, filename)
+            nib.save(nib.Nifti1Image(test_image, np.eye(4)), filename)
+            result = LoadImage(image_only=True, **input_param)(filename)  # with itk, meta has 'qto_xyz': itkMatrixF44
+        set_track_meta(track_meta)
+        self.assertTupleEqual(
+            result.shape, (3, 128, 128, 128) if input_param.get("ensure_channel_first", False) else expected_shape
+        )
 
 
 @unittest.skipUnless(has_itk, "itk not installed")

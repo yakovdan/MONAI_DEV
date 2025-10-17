@@ -39,6 +39,7 @@ from monai.data.image_reader import (
     PILReader,
     PydicomReader,
 )
+from monai.data.meta_obj import get_track_meta, set_track_meta
 from monai.data.meta_tensor import MetaTensor
 from monai.data.utils import is_no_channel
 from monai.transforms.transform import Transform
@@ -295,11 +296,21 @@ class LoadImage(Transform):
 
         # Path obj should be strings for data loader
         meta_data[ImageMetaKey.FILENAME_OR_OBJ] = f"{ensure_tuple(filename)[0]}"
-        img = MetaTensor.ensure_torch_and_prune_meta(
-            img_array, meta_data, self.simple_keys, pattern=self.pattern, sep=self.sep
-        )
+
+        # let EnsureChannelFirst see metadata when available even if get_track_meta() == False
         if self.ensure_channel_first:
+            track_meta = get_track_meta()  # backup current track_meta status before forcing track_meta == True
+            set_track_meta(True)
+            img = MetaTensor.ensure_torch_and_prune_meta(
+                img_array, meta_data, self.simple_keys, pattern=self.pattern, sep=self.sep
+            )
+            set_track_meta(track_meta)  # restore track_meta status
             img = EnsureChannelFirst()(img)
+        else:
+            img = MetaTensor.ensure_torch_and_prune_meta(
+                img_array, meta_data, self.simple_keys, pattern=self.pattern, sep=self.sep
+            )
+
         if self.image_only:
             return img
         return img, img.meta if isinstance(img, MetaTensor) else meta_data
