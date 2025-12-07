@@ -223,9 +223,9 @@ def sliding_window_inference(
             for idx in slice_range
         ]
         if sw_batch_size > 1:
-            win_data = torch.cat([inputs[win_slice] for win_slice in unravel_slice]).to(sw_device)
+            win_data = torch.cat([inputs[tuple(win_slice)] for win_slice in unravel_slice]).to(sw_device)
             if condition is not None:
-                win_condition = torch.cat([condition[win_slice] for win_slice in unravel_slice]).to(sw_device)
+                win_condition = torch.cat([condition[tuple(win_slice)] for win_slice in unravel_slice]).to(sw_device)
                 kwargs["condition"] = win_condition
         else:
             win_data = inputs[unravel_slice[0]].to(sw_device)
@@ -367,7 +367,7 @@ def _compute_coords(coords, z_scale, out, patch):
                 idx_zm[axis] = slice(
                     int(original_idx[axis].start * z_scale[axis - 2]), int(original_idx[axis].stop * z_scale[axis - 2])
                 )
-        out[idx_zm] += p
+        out[tuple(idx_zm)] += p
 
 
 def _get_scan_interval(
